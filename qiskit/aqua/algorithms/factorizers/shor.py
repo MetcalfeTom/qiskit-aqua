@@ -134,7 +134,7 @@ class Shor(QuantumAlgorithm):
             # ccphase(circuit, -angle[i] if inverse else angle[i], ctl1, ctl2, q[i])
             circuit.mcu1(-angle[i] if inverse else angle[i], [ctl1, ctl2], q[i])
 
-    def _controlled_controlled_phi_add_mod_N(self, circuit, q, ctl1, ctl2, aux, a):
+    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit, q, ctl1, ctl2, aux, a):
         """Circuit that implements doubly controlled modular addition by a."""
         qubits = [q[i] for i in reversed(range(self._n + 1))]
 
@@ -148,9 +148,9 @@ class Shor(QuantumAlgorithm):
 
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
         circuit.compose(self._iqft, qubits, inplace=True)
-        circuit.u3(np.pi, 0, np.pi, q[self._n])
+        circuit.x(q[self._n])
         circuit.cx(q[self._n], aux)
-        circuit.u3(np.pi, 0, np.pi, q[self._n])
+        circuit.x(q[self._n])
         circuit.compose(self._qft, qubits, inplace=True)
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a)
 
@@ -160,9 +160,9 @@ class Shor(QuantumAlgorithm):
 
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
         circuit.compose(self._iqft, qubits, inplace=True)
-        circuit.u3(np.pi, 0, np.pi, q[self._n])
+        circuit.x(q[self._n])
         circuit.cx(q[self._n], aux)
-        circuit.u3(np.pi, 0, np.pi, q[self._n])
+        circuit.x(q[self._n])
         circuit.compose(self._qft, qubits, inplace=True)
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a)
         self._controlled_phi_add(circuit, q, aux, inverse=True)
@@ -172,7 +172,7 @@ class Shor(QuantumAlgorithm):
         self._phi_add(circuit, q)
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
 
-    def _controlled_multiple_mod_N(self, circuit, ctl, q, aux, a):
+    def _controlled_multiple_mod_N(self, circuit: QuantumCircuit, ctl, q, aux, a):
         """Circuit that implements single controlled modular multiplication by a."""
         qubits = [aux[i] for i in reversed(range(self._n + 1))]
         circuit.compose(self._qft, qubits, inplace=True)
@@ -246,7 +246,7 @@ class Shor(QuantumAlgorithm):
 
         # Initialize down register to 1 and create maximal superposition in top register
         circuit.u2(0, np.pi, self._up_qreg)
-        circuit.u3(np.pi, 0, np.pi, self._down_qreg[0])
+        circuit.x(self._down_qreg[0])
 
         # Apply the multiplication gates as showed in
         # the report in order to create the exponentiation
