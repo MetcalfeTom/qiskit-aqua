@@ -96,6 +96,9 @@ class Shor(QuantumAlgorithm):
         self._qft = QFT(do_swaps=False)
         self._iqft = self._qft.inverse()
 
+    def _init_circuit(self):
+        return QuantumCircuit(self._up_qreg, self._down_qreg, self._aux_qreg)
+
     def _get_angles(self, a: int) -> np.ndarray:
         """Calculate the array of angles to be used in the addition in Fourier Space."""
         s = bin(int(a))[2:].zfill(self._n + 1)
@@ -156,19 +159,19 @@ class Shor(QuantumAlgorithm):
         return circuit
 
     def _controlled_multiple_mod_N(self,
-                                   circuit: QuantumCircuit,
                                    ctl: Qubit,
                                    q: QuantumRegister,
                                    aux: QuantumRegister,
-                                   a: int) -> None:
+                                   a: int) -> QuantumCircuit:
         """Circuit that implements single controlled modular multiplication by a."""
         qubits = [aux[i] for i in reversed(range(self._n + 1))]
-        circuit.compose(self._qft, qubits, inplace=True)
 
-        add_mod_circuit = QuantumCircuit(self._up_qreg, self._down_qreg, self._aux_qreg)
+        add_mod_circuit = self._init_circuit()
+        add_mod_circuit.compose(self._qft, qubits, inplace=True)
+
         for i in range(0, self._n):
             add_mod_circuit.extend(
-            self._controlled_controlled_phi_add_mod_N(
+            self._controlled_controlled_phi_add_mod_a(
                 add_mod_circuit,
                 aux,
                 q[i],
@@ -178,12 +181,12 @@ class Shor(QuantumAlgorithm):
             ))
 
         add_mod_circuit.compose(self._iqft, qubits, inplace=True)
-        circuit.extend(add_mod_circuit)
 
         for i in range(0, self._n):
-            circuit.cswap(ctl, q[i], aux[i])
+            add_mod_circuit.cswap(ctl, q[i], aux[i])
 
-        circuit.extend(add_mod_circuit.inverse())
+        add_mod_circuit.extend(add_mod_circuit.inverse())
+        return add_mod_circuit
 
     def construct_circuit(self, measurement: bool = False) -> QuantumCircuit:
         """Construct circuit.
@@ -208,7 +211,7 @@ class Shor(QuantumAlgorithm):
         self._aux_qreg = QuantumRegister(self._n + 2, name='aux')
 
         # Create Quantum Circuit
-        circuit = QuantumCircuit(self._up_qreg, self._down_qreg, self._aux_qreg)
+        circuit = self._init_circuit()
 
         # Initialize down register to 1 and create maximal superposition in top register
         circuit.ry(np.pi/2, self._up_qreg)
@@ -217,13 +220,12 @@ class Shor(QuantumAlgorithm):
         # Apply the multiplication gates as showed in
         # the report in order to create the exponentiation
         for i, control_qubit in enumerate(self._up_qreg):
-            self._controlled_multiple_mod_N(
-                circuit,
+            circuit.extend(self._controlled_multiple_mod_N(
                 control_qubit,
                 self._down_qreg,
                 self._aux_qreg,
                 int(pow(self._a, pow(2, i)))
-            )
+            ))
 
         # Apply inverse QFT
         iqft = QFT(len(self._up_qreg)).inverse()
