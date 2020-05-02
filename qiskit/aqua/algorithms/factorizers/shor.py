@@ -22,6 +22,7 @@ import logging
 import numpy as np
 
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
+from qiskit.circuit import Qubit
 from qiskit.circuit.library import QFT
 from qiskit.providers import BaseBackend
 from qiskit.aqua import QuantumInstance
@@ -172,7 +173,12 @@ class Shor(QuantumAlgorithm):
         self._phi_add(circuit, q)
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
 
-    def _controlled_multiple_mod_N(self, circuit: QuantumCircuit, ctl, q, aux, a):
+    def _controlled_multiple_mod_N(self,
+                                   circuit: QuantumCircuit,
+                                   ctl: Qubit,
+                                   q: QuantumRegister,
+                                   aux: QuantumRegister,
+                                   a: int) -> None:
         """Circuit that implements single controlled modular multiplication by a."""
         qubits = [aux[i] for i in reversed(range(self._n + 1))]
         circuit.compose(self._qft, qubits, inplace=True)
@@ -245,22 +251,22 @@ class Shor(QuantumAlgorithm):
         circuit = QuantumCircuit(self._up_qreg, self._down_qreg, self._aux_qreg)
 
         # Initialize down register to 1 and create maximal superposition in top register
-        circuit.u2(0, np.pi, self._up_qreg)
+        circuit.ry(np.pi/2, self._up_qreg)
         circuit.x(self._down_qreg[0])
 
         # Apply the multiplication gates as showed in
         # the report in order to create the exponentiation
-        for i in range(0, 2 * self._n):
+        for i, control_qubit in enumerate(self._up_qreg):
             self._controlled_multiple_mod_N(
                 circuit,
-                self._up_qreg[i],
+                control_qubit,
                 self._down_qreg,
                 self._aux_qreg,
                 int(pow(self._a, pow(2, i)))
             )
 
         # Apply inverse QFT
-        iqft = QFT(len(self._up_qreg), inverse=True)
+        iqft = QFT(len(self._up_qreg)).inverse()
         circuit.compose(iqft, qubits=self._up_qreg)
 
         if measurement:
