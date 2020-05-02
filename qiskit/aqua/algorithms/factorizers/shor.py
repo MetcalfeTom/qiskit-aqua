@@ -27,7 +27,7 @@ from qiskit.providers import BaseBackend
 from qiskit.aqua import QuantumInstance
 from qiskit.aqua.utils.arithmetic import is_power
 from qiskit.aqua.utils import get_subsystem_density_matrix
-from qiskit.aqua.algorithms import QuantumAlgorithm
+from qiskit.aqua.algorithms import QuantumAlgorithm, AlgorithmResult
 from qiskit.aqua.utils import summarize_circuits
 from qiskit.aqua.utils.validation import validate_min
 
@@ -84,7 +84,7 @@ class Shor(QuantumAlgorithm):
 
         self._a = a
 
-        self._ret = {'factors': []}
+        self._ret = AlgorithmResult({"factors": [], "results": {}})
 
         # check if the input integer is a power
         tf, b, p = is_power(N, return_decomposition=True)
@@ -95,7 +95,7 @@ class Shor(QuantumAlgorithm):
         self._qft = QFT(do_swaps=False)
         self._iqft = self._qft.inverse()
 
-    def _get_angles(self, a):
+    def _get_angles(self, a: int) -> np.ndarray:
         """Calculate the array of angles to be used in the addition in Fourier Space."""
         s = bin(int(a))[2:].zfill(self._n + 1)
         angles = np.zeros([self._n + 1])
@@ -106,7 +106,7 @@ class Shor(QuantumAlgorithm):
             angles[self._n - i] *= np.pi
         return angles
 
-    def _phi_add(self, circuit, q, inverse=False):
+    def _phi_add(self, circuit: QuantumCircuit, q: QuantumRegister, inverse: bool = False) -> None:
         """Creation of the circuit that performs addition by a in Fourier Space.
 
         Can also be used for subtraction by setting the parameter ``inverse=True``.
@@ -115,7 +115,7 @@ class Shor(QuantumAlgorithm):
         for i in range(0, self._n + 1):
             circuit.u1(-angle[i] if inverse else angle[i], q[i])
 
-    def _controlled_phi_add(self, circuit, q, ctl, inverse=False):
+    def _controlled_phi_add(self, circuit: QuantumCircuit, q: QuantumRegister, ctl, inverse: bool = False):
         """Single controlled version of the _phi_add circuit."""
         angles = self._get_angles(self._N)
         for i in range(0, self._n + 1):
@@ -127,7 +127,7 @@ class Shor(QuantumAlgorithm):
             circuit.cx(ctl, q[i])
             circuit.u1(angle, q[i])
 
-    def _controlled_controlled_phi_add(self, circuit, q, ctl1, ctl2, a, inverse=False):
+    def _controlled_controlled_phi_add(self, circuit: QuantumCircuit, q, ctl1, ctl2, a, inverse=False):
         """Doubly controlled version of the _phi_add circuit."""
         angle = self._get_angles(a)
         for i in range(self._n + 1):
@@ -272,7 +272,7 @@ class Shor(QuantumAlgorithm):
 
         return circuit
 
-    def _get_factors(self, output_desired, t_upper):
+    def _get_factors(self, output_desired: str, t_upper: int) -> bool:
         """Apply the continued fractions to find r and the gcd to find the desired factors."""
         x_value = int(output_desired, 2)
         logger.info('In decimal, x_final value for this result is: %s.', x_value)
@@ -377,7 +377,7 @@ class Shor(QuantumAlgorithm):
                     self._ret['factors'].append(factors)
                 return True
 
-    def _run(self):
+    def _run(self) -> AlgorithmResult:
         if not self._ret['factors']:
             logger.debug('Running with N=%s and a=%s.', self._N, self._a)
 
@@ -401,8 +401,6 @@ class Shor(QuantumAlgorithm):
             else:
                 circuit = self.construct_circuit(measurement=True)
                 counts = self._quantum_instance.execute(circuit).get_counts(circuit)
-
-            self._ret['results'] = dict()
 
             # For each simulation result, print proper info to user
             # and try to calculate the factors of N
