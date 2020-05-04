@@ -123,13 +123,8 @@ class Shor(QuantumAlgorithm):
         """Single controlled version of the _phi_add circuit."""
         angles = self._get_angles(self._N)
         for i in range(0, self._n + 1):
-            angle = (-angles[i] if inverse else angles[i]) / 2
-
-            circuit.u1(angle, ctl)
-            circuit.cx(ctl, q[i])
-            circuit.u1(-angle, q[i])
-            circuit.cx(ctl, q[i])
-            circuit.u1(angle, q[i])
+            angle = (-angles[i] if inverse else angles[i])
+            circuit.cu1(angle, ctl, q[i])
 
     def _controlled_controlled_phi_add(self, circuit: QuantumCircuit, q, ctl1, ctl2, a, inverse=False):
         """Doubly controlled version of the _phi_add circuit."""
@@ -171,7 +166,7 @@ class Shor(QuantumAlgorithm):
 
         for i in range(0, self._n):
             add_mod_circuit.extend(
-            self._controlled_controlled_phi_add_mod_a(
+            self._controlled_controlled_phi_add_mod_N(
                 add_mod_circuit,
                 aux,
                 q[i],
@@ -213,8 +208,10 @@ class Shor(QuantumAlgorithm):
         # Create Quantum Circuit
         circuit = self._init_circuit()
 
-        # Initialize down register to 1 and create maximal superposition in top register
+        # Create maximal superposition in top register
         circuit.ry(np.pi/2, self._up_qreg)
+
+        # Initialize down register to 1
         circuit.x(self._down_qreg[0])
 
         # Apply the multiplication gates as showed in
