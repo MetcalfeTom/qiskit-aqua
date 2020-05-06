@@ -97,6 +97,9 @@ class Shor(QuantumAlgorithm):
         self._qft = QFT(do_swaps=False)
         self._iqft = self._qft.inverse()
 
+        self._phi_add = None
+        self._iphi_add = None
+
     def _init_circuit(self) -> QuantumCircuit:
         return QuantumCircuit(self._up_qreg, self._down_qreg, self._aux_qreg)
 
@@ -111,11 +114,8 @@ class Shor(QuantumAlgorithm):
             angles[self._n - i] *= np.pi
         return angles
 
-    def _phi_add(self, q: QuantumRegister) -> Gate:
-        """Creation of the circuit that performs addition by a in Fourier Space.
-
-        Can also be used for subtraction by setting the parameter ``inverse=True``.
-        """
+    def _phi_add_gate(self, q: QuantumRegister) -> Gate:
+        """Creation of the gate that performs addition by a in Fourier Space."""
         circuit = self._init_circuit()
         angle = self._get_angles(self._N)
         for i in range(self._n + 1):
@@ -213,7 +213,7 @@ class Shor(QuantumAlgorithm):
         # Create Quantum Circuit
         circuit = self._init_circuit()
 
-        self._phi_add = self._phi_add()
+        self._phi_add = self._phi_add_gate(self._down_qreg)
         self._iphi_add = self._phi_add.inverse()
 
         # Create maximal superposition in top register
