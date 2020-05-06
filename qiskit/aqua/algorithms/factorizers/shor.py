@@ -24,6 +24,7 @@ import numpy as np
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
 from qiskit.circuit.library import QFT
+from qiskit.circuit.gate import Gate
 from qiskit.providers import BaseBackend
 from qiskit.aqua import QuantumInstance
 from qiskit.aqua.utils.arithmetic import is_power
@@ -96,7 +97,7 @@ class Shor(QuantumAlgorithm):
         self._qft = QFT(do_swaps=False)
         self._iqft = self._qft.inverse()
 
-    def _init_circuit(self):
+    def _init_circuit(self) -> QuantumCircuit:
         return QuantumCircuit(self._up_qreg, self._down_qreg, self._aux_qreg)
 
     def _get_angles(self, a: int) -> np.ndarray:
@@ -110,19 +111,21 @@ class Shor(QuantumAlgorithm):
             angles[self._n - i] *= np.pi
         return angles
 
-    def _phi_add(self, circuit: QuantumCircuit, q: QuantumRegister, inverse: bool = False) -> None:
+    def _phi_add(self, q: QuantumRegister) -> Gate:
         """Creation of the circuit that performs addition by a in Fourier Space.
 
         Can also be used for subtraction by setting the parameter ``inverse=True``.
         """
+        circuit = self._init_circuit()
         angle = self._get_angles(self._N)
-        for i in range(0, self._n + 1):
-            circuit.u1(-angle[i] if inverse else angle[i], q[i])
+        for i in range(self._n + 1):
+            circuit.u1(angle[i], q[i])
+        return circuit.to_gate()
 
     def _controlled_phi_add(self, circuit: QuantumCircuit, q: QuantumRegister, ctl, inverse: bool = False):
         """Single controlled version of the _phi_add circuit."""
         angles = self._get_angles(self._N)
-        for i in range(0, self._n + 1):
+        for i in range(self._n + 1):
             angle = (-angles[i] if inverse else angles[i])
             circuit.cu1(angle, ctl, q[i])
 
@@ -132,7 +135,7 @@ class Shor(QuantumAlgorithm):
         for i in range(self._n + 1):
             circuit.mcu1(-angle[i] if inverse else angle[i], [ctl1, ctl2], q[i])
 
-    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit, q, ctl1, ctl2, aux, a):
+    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit, q: QuantumRegister, ctl1: Qubit, ctl2: Qubit, aux, a):
         """Circuit that implements doubly controlled modular addition by a."""
         qubits = [q[i] for i in reversed(range(self._n + 1))]
 
@@ -140,12 +143,14 @@ class Shor(QuantumAlgorithm):
         self._phi_add(circuit, q, inverse=True)
 
         circuit.compose(self._iqft, qubits, inplace=True)
+
         circuit.cx(q[self._n], aux)
+
         circuit.compose(self._qft, qubits, inplace=True)
         self._controlled_phi_add(circuit, q, aux)
-
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
         circuit.compose(self._iqft, qubits, inplace=True)
+
         circuit.x(q[self._n])
         circuit.cx(q[self._n], aux)
         circuit.x(q[self._n])
@@ -207,6 +212,9 @@ class Shor(QuantumAlgorithm):
 
         # Create Quantum Circuit
         circuit = self._init_circuit()
+
+        self._phi_add = self._phi_add()
+        self._iphi_add = self._phi_add.inverse()
 
         # Create maximal superposition in top register
         circuit.ry(np.pi/2, self._up_qreg)
