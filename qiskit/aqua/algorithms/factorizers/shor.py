@@ -119,6 +119,9 @@ class Shor(QuantumAlgorithm):
         circuit = self._init_circuit()
         angle = self._get_angles(self._N)
         for i in range(self._n + 1):
+            print(i)
+            print(q)
+            print(angle)
             circuit.u1(angle[i], q[i])
         return circuit.to_gate()
 
@@ -135,25 +138,25 @@ class Shor(QuantumAlgorithm):
         for i in range(self._n + 1):
             circuit.mcu1(-angle[i] if inverse else angle[i], [ctl1, ctl2], q[i])
 
-    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit, q: QuantumRegister, ctl1: Qubit, ctl2: Qubit, aux, a):
+    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit, q: QuantumRegister, ctl1: Qubit, ctl2: Qubit, aux: Qubit, a: int):
         """Circuit that implements doubly controlled modular addition by a."""
         qubits = [q[i] for i in reversed(range(self._n + 1))]
 
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a)
-        self._phi_add(circuit, q, inverse=True)
-
+        circuit.compose(self._iphi_add, q, inplace=True)
         circuit.compose(self._iqft, qubits, inplace=True)
 
         circuit.cx(q[self._n], aux)
 
         circuit.compose(self._qft, qubits, inplace=True)
-        self._controlled_phi_add(circuit, q, aux)
+        circuit.append(self._phi_add.control(1), aux)
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
         circuit.compose(self._iqft, qubits, inplace=True)
 
         circuit.x(q[self._n])
         circuit.cx(q[self._n], aux)
         circuit.x(q[self._n])
+
         circuit.compose(self._qft, qubits, inplace=True)
         self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a)
         return circuit
