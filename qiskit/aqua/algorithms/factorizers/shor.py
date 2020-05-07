@@ -386,3 +386,7 @@ class Shor(QuantumAlgorithm):
                                 output_desired, self._ret['results'][output_desired])
 
         return self._ret
+
+from qiskit import Aer
+shor = Shor(15)
+result_dict = shor.run(QuantumInstance(Aer.get_backend("qasm_simulator"), shots=1000))
