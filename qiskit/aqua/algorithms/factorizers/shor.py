@@ -130,8 +130,8 @@ class Shor(QuantumAlgorithm):
                                              a: int):
         """Circuit that implements doubly controlled modular addition by a."""
         qubits = [q[i] for i in reversed(range(self._n + 1))]
-
-        circuit.append(self._phi_add_gate(q, a).control(2), [ctl1, ctl2])
+        print([*q._bits, ctl1, ctl2])
+        circuit.compose(self._phi_add_gate(q, a).control(2), [*q._bits, ctl1, ctl2])
 
         circuit.compose(self._iphi_add, q, inplace=True)
         circuit.compose(self._iqft, qubits, inplace=True)
@@ -139,9 +139,9 @@ class Shor(QuantumAlgorithm):
         circuit.cx(q[self._n], aux)  # midpoint
 
         circuit.compose(self._qft, qubits, inplace=True)
-        circuit.append(self._phi_add.control(1), aux)
+        circuit.compose(self._phi_add.control(1), [*q._bits, aux])
 
-        circuit.append(self._phi_add_gate(q, a).inverse().control(2), [ctl1, ctl2])
+        circuit.compose(self._phi_add_gate(q, a).inverse().control(2), [*q._bits, ctl1, ctl2])
 
         circuit.compose(self._iqft, qubits, inplace=True)
 
@@ -151,7 +151,7 @@ class Shor(QuantumAlgorithm):
 
         circuit.compose(self._qft, qubits, inplace=True)
 
-        circuit.append(self._phi_add_gate(q, a).control(2), [ctl1, ctl2])
+        circuit.compose(self._phi_add_gate(q, a).control(2), [*q._bits, ctl1, ctl2])
 
         return circuit
 
