@@ -119,24 +119,8 @@ class Shor(QuantumAlgorithm):
         circuit = self._init_circuit()
         angle = self._get_angles(a)
         for i in range(self._n + 1):
-            print(i)
-            print(q)
-            print(angle)
             circuit.u1(angle[i], q[i])
         return circuit.to_gate()
-
-    def _controlled_phi_add(self, circuit: QuantumCircuit, q: QuantumRegister, ctl, inverse: bool = False):
-        """Single controlled version of the _phi_add circuit."""
-        angles = self._get_angles(self._N)
-        for i in range(self._n + 1):
-            angle = (-angles[i] if inverse else angles[i])
-            circuit.cu1(angle, ctl, q[i])
-
-    def _controlled_controlled_phi_add(self, circuit: QuantumCircuit, q, ctl1, ctl2, a, inverse=False):
-        """Doubly controlled version of the _phi_add circuit."""
-        angle = self._get_angles(a)
-        for i in range(self._n + 1):
-            circuit.mcu1(-angle[i] if inverse else angle[i], [ctl1, ctl2], q[i])
 
     def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit,
                                              q: QuantumRegister,
