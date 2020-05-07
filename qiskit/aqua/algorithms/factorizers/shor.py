@@ -114,10 +114,10 @@ class Shor(QuantumAlgorithm):
             angles[self._n - i] *= np.pi
         return angles
 
-    def _phi_add_gate(self, q: QuantumRegister) -> Gate:
+    def _phi_add_gate(self, q: QuantumRegister, a: int) -> Gate:
         """Creation of the gate that performs addition by a in Fourier Space."""
         circuit = self._init_circuit()
-        angle = self._get_angles(self._N)
+        angle = self._get_angles(a)
         for i in range(self._n + 1):
             print(i)
             print(q)
@@ -138,27 +138,37 @@ class Shor(QuantumAlgorithm):
         for i in range(self._n + 1):
             circuit.mcu1(-angle[i] if inverse else angle[i], [ctl1, ctl2], q[i])
 
-    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit, q: QuantumRegister, ctl1: Qubit, ctl2: Qubit, aux: Qubit, a: int):
+    def _controlled_controlled_phi_add_mod_N(self, circuit: QuantumCircuit,
+                                             q: QuantumRegister,
+                                             ctl1: Qubit,
+                                             ctl2: Qubit,
+                                             aux: Qubit,
+                                             a: int):
         """Circuit that implements doubly controlled modular addition by a."""
         qubits = [q[i] for i in reversed(range(self._n + 1))]
 
-        self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a)
+        circuit.append(self._phi_add_gate(q, a).control(2), [ctl1, ctl2])
+
         circuit.compose(self._iphi_add, q, inplace=True)
         circuit.compose(self._iqft, qubits, inplace=True)
 
-        circuit.cx(q[self._n], aux)
+        circuit.cx(q[self._n], aux)  # midpoint
 
         circuit.compose(self._qft, qubits, inplace=True)
         circuit.append(self._phi_add.control(1), aux)
-        self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a, inverse=True)
+
+        circuit.append(self._phi_add_gate(q, a).inverse().control(2), [ctl1, ctl2])
+
         circuit.compose(self._iqft, qubits, inplace=True)
 
         circuit.x(q[self._n])
-        circuit.cx(q[self._n], aux)
+        circuit.cx(q[self._n], aux)  # midpoint 2
         circuit.x(q[self._n])
 
         circuit.compose(self._qft, qubits, inplace=True)
-        self._controlled_controlled_phi_add(circuit, q, ctl1, ctl2, a)
+
+        circuit.append(self._phi_add_gate(q, a).control(2), [ctl1, ctl2])
+
         return circuit
 
     def _controlled_multiple_mod_N(self,
@@ -216,7 +226,7 @@ class Shor(QuantumAlgorithm):
         # Create Quantum Circuit
         circuit = self._init_circuit()
 
-        self._phi_add = self._phi_add_gate(self._down_qreg)
+        self._phi_add = self._phi_add_gate(self._aux_qreg, self._N)
         self._iphi_add = self._phi_add.inverse()
 
         # Create maximal superposition in top register
