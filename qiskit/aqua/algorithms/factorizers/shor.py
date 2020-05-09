@@ -139,7 +139,7 @@ class Shor(QuantumAlgorithm):
         circuit.cx(aux[self._n], ctl_aux)  # midpoint
 
         circuit.compose(self._qft, qubits, inplace=True)
-        circuit.compose(self._phi_add_gate(aux, a).control(1), [*aux._bits], inplace=True)
+        circuit.compose(self._phi_add_gate(aux, a).control(1), [*aux._bits, ctl_up], inplace=True)
 
         circuit.compose(self._phi_add_gate(aux, a).inverse().control(2), [*aux._bits, ctl_down, ctl_up], inplace=True)
 
@@ -389,5 +389,6 @@ class Shor(QuantumAlgorithm):
         return self._ret
 
 from qiskit import Aer
-shor = Shor(15)
-result_dict = shor.run(QuantumInstance(Aer.get_backend("qasm_simulator"), shots=1000))
+shor = Shor(15, 11)
+circ = shor.construct_circuit()
+# result_dict = shor.run(QuantumInstance(Aer.get_backend("qasm_simulator"), shots=1000))
