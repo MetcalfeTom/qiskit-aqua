@@ -116,7 +116,7 @@ class Shor(QuantumAlgorithm):
 
     def _phi_add_gate(self, q: QuantumRegister, a: int) -> Gate:
         """Creation of the gate that performs addition by a in Fourier Space."""
-        circuit = QuantumCircuit(q)
+        circuit = QuantumCircuit(q, name="phi_add")
         angle = self._get_angles(a)
         for i in range(self._n + 1):
             circuit.u1(angle[i], q[i])
@@ -221,9 +221,9 @@ class Shor(QuantumAlgorithm):
 
         # Apply the multiplication gates as showed in
         # the report in order to create the exponentiation
-        for i, control_qubit in enumerate(self._up_qreg):
+        for i, ctl_up in enumerate(self._up_qreg):
             circuit.extend(self._controlled_multiple_mod_N(
-                control_qubit,
+                ctl_up,
                 self._down_qreg,
                 self._aux_qreg,
                 int(pow(self._a, pow(2, i)))
