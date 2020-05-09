@@ -214,7 +214,7 @@ class Shor(QuantumAlgorithm):
         self._iphi_add = self._phi_add.inverse()
 
         # Create maximal superposition in top register
-        circuit.ry(np.pi/2, self._up_qreg)
+        circuit.h(self._up_qreg)
 
         # Initialize down register to 1
         circuit.x(self._down_qreg[0])
