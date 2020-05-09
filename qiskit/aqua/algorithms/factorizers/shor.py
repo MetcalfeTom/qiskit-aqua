@@ -167,24 +167,25 @@ class Shor(QuantumAlgorithm):
         add_mod_circuit = self._init_circuit()
         add_mod_circuit.compose(self._qft, qubits, inplace=True)
 
-        for i in range(0, self._n):
-            add_mod_circuit.extend(
-            self._controlled_controlled_phi_add_mod_N(
-                add_mod_circuit,
-                aux,
-                down[i],
-                ctl_up,
-                aux[self._n + 1],
-                (2 ** i) * a % self._N
-            ))
+        ctl_aux = aux[-1]
+
+        for i, ctl_down in enumerate(down):
+            add_mod_circuit = add_mod_circuit.combine(
+                self._controlled_controlled_phi_add_mod_N(
+                    add_mod_circuit,
+                    aux,
+                    ctl_down,
+                    ctl_up,
+                    ctl_aux,
+                    (2 ** i) * a % self._N)
+            )
 
         add_mod_circuit.compose(self._iqft, qubits, inplace=True)
 
         for i in range(0, self._n):
             add_mod_circuit.cswap(ctl_up, down[i], aux[i])
 
-        add_mod_circuit.extend(add_mod_circuit.inverse())
-        return add_mod_circuit
+        return add_mod_circuit.combine(add_mod_circuit.inverse())
 
     def construct_circuit(self, measurement: bool = False) -> QuantumCircuit:
         """Construct circuit.
@@ -223,7 +224,7 @@ class Shor(QuantumAlgorithm):
         # Apply the multiplication gates as showed in
         # the report in order to create the exponentiation
         for i, ctl_up in enumerate(self._up_qreg):
-            circuit.extend(self._controlled_multiple_mod_N(
+            circuit = circuit.combine(self._controlled_multiple_mod_N(
                 ctl_up,
                 self._down_qreg,
                 self._aux_qreg,
@@ -392,4 +393,4 @@ class Shor(QuantumAlgorithm):
 from qiskit import Aer
 shor = Shor(15, 11)
 circ = shor.construct_circuit()
-# result_dict = shor.run(QuantumInstance(Aer.get_backend("qasm_simulator"), shots=1000))
+result_dict = shor.run(QuantumInstance(Aer.get_backend("qasm_simulator"), shots=1000))
