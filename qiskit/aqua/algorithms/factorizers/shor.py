@@ -134,15 +134,15 @@ class Shor(QuantumAlgorithm):
         qubits = [aux[i] for i in reversed(range(self._n + 1))]
         circuit.compose(self._phi_add_gate(aux.size, a).control(2), [*aux._bits, ctl_down, ctl_up], inplace=True)
 
-        circuit.compose(self._iphi_add, aux, inplace=True)
+        circuit.compose(self._iphi_add, qubits, inplace=True)
         circuit.compose(self._iqft, qubits, inplace=True)
 
         circuit.cx(aux[self._n], ctl_aux)  # midpoint
 
         circuit.compose(self._qft, qubits, inplace=True)
-        circuit.compose(self._phi_add_gate(aux.size - 1, a).control(1), aux, inplace=True)
+        circuit.compose(self._phi_add_gate(aux.size - 1, a).control(1), [ctl_aux, *qubits], inplace=True)
 
-        circuit.compose(self._phi_add_gate(aux.size, a).inverse().control(2), [*aux._bits, ctl_down, ctl_up], inplace=True)
+        circuit.compose(self._phi_add_gate(aux.size, a).inverse().control(2), [qubits, ctl_down, ctl_up], inplace=True)
 
         circuit.compose(self._iqft, qubits, inplace=True)
 
@@ -212,6 +212,7 @@ class Shor(QuantumAlgorithm):
         # Create Quantum Circuit
         circuit = self._init_circuit()
 
+        # Create gates to perform addition in Fourier Space
         self._phi_add = self._phi_add_gate(self._aux_qreg.size, self._N)
         self._iphi_add = self._phi_add.inverse()
 
