@@ -125,13 +125,16 @@ class Shor(QuantumAlgorithm):
 
     def _controlled_controlled_phi_add_mod_N(self,
                                              aux: QuantumRegister,
-                                             ctl_up: Qubit,
-                                             ctl_down: Qubit,
-                                             ctl_aux: Qubit,
                                              a: int) -> Gate:
         """Implements doubly controlled modular addition by a on circuit."""
         qubits = [aux[i] for i in reversed(range(self._n + 1))]
-        circuit = self._init_circuit(name="phi_add_{}_mod_{}".format(a % self._N, self._N))
+        q = QuantumRegister(aux.size + 2)
+        
+        circuit = QuantumCircuit(q, name="phi_add_{}_mod_{}".format(a % self._N, self._N))
+
+        ctl_up = q[-1]
+        ctl_down = q[-2]
+        ctl_aux = q[-3]
 
         # Store the gate representing addition/subtraction by a in Fourier Space
         phi_add_a = self._phi_add_gate(aux.size - 1, a)
@@ -172,10 +175,7 @@ class Shor(QuantumAlgorithm):
             circuit.compose(
                 self._controlled_controlled_phi_add_mod_N(
                     aux,
-                    ctl_up,
-                    ctl_down,
-                    ctl_aux,
-                    (2 ** i) * a % self._N), inplace=True)
+                    (2 ** i) * a % self._N), reversed(circuit.qubits), inplace=True)
 
         circuit.compose(self._iqft, qubits, inplace=True)
         return circuit.to_gate()
@@ -237,7 +237,7 @@ class Shor(QuantumAlgorithm):
                     ctl_up,
                     self._down_qreg,
                     self._aux_qreg,
-                    a), inplace=True)
+                    a), reversed(circuit.qubits), inplace=True)
 
             for j in range(self._n):
                 circuit.cswap(ctl_up, self._down_qreg[j], self._aux_qreg[j])
@@ -248,7 +248,7 @@ class Shor(QuantumAlgorithm):
                     ctl_up,
                     self._down_qreg,
                     self._aux_qreg,
-                    a_inv).inverse(), inplace=True)
+                    a_inv).inverse(), reversed(circuit.qubits), inplace=True)
 
         # Apply inverse QFT
         iqft = QFT(len(self._up_qreg)).inverse()
